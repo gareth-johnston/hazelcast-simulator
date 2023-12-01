@@ -296,7 +296,7 @@ The following are the key concepts mentioned with Hazelcast Simulator.
 
 - **TestSuite** - A yaml file that contains the name of the `Test` classes and the properties you want to set on
   those `Test`
-  class instance. A `TestSuite` contains one or multiple tests. It can also contain the same `Test` class with different
+  class instances. A `TestSuite` contains one or multiple tests. It can also contain the same `Test` class with different
   names and configurations.
 
 - **Worker** - This term `Worker` is used twice in Simulator.
