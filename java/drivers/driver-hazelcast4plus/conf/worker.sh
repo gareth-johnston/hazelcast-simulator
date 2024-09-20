@@ -7,6 +7,43 @@
 # See the end of this file for examples for different profilers.
 #
 
+# Check if cp-data exists and clear its contents if it does
+if [ -d "/cp-data" ]; then
+    echo "Cleaning up existing cp-data directory..."
+    sudo umount /cp-data
+    sudo rm -rf /cp-data
+fi
+
+# Unmount /dev/nvme1n1 if it's already mounted
+if mount | grep /dev/nvme1n1 > /dev/null; then
+    echo "Unmounting /dev/nvme1n1..."
+    sudo umount /dev/nvme1n1
+fi
+
+
+
+# Create XFS filesystem on /dev/nvme1n1
+sudo mkfs -t xfs /dev/nvme1n1
+
+# Create a directory cp-data (if it doesn't exist already)
+sudo mkdir -p /cp-data
+
+# Change the ownership of cp-data to ec2-user
+sudo chown ec2-user:ec2-user /cp-data
+
+# Change the permissions of cp-data to allow read/write by ec2-user
+sudo chmod 755 /cp-data
+
+# Mount the filesystem
+sudo mount /dev/nvme1n1 /cp-data
+
+# Change the ownership of the mounted filesystem to ec2-user
+sudo chown ec2-user:ec2-user /cp-data
+
+
+
+
+
 # automatic exit on script failure
 set -e
 # printing the command being executed (useful for debugging)

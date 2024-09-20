@@ -1,18 +1,4 @@
-/*
- * Copyright (c) 2008-2023, Hazelcast, Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package com.hazelcast.simulator.tests.cp;
 
 import com.hazelcast.collection.IList;
@@ -20,6 +6,7 @@ import com.hazelcast.cp.CPMap;
 import com.hazelcast.simulator.hz.HazelcastTest;
 import com.hazelcast.simulator.test.BaseThreadState;
 import com.hazelcast.simulator.test.annotations.AfterRun;
+import com.hazelcast.simulator.test.annotations.Prepare;
 import com.hazelcast.simulator.test.annotations.Setup;
 import com.hazelcast.simulator.test.annotations.TimeStep;
 import com.hazelcast.simulator.test.annotations.Verify;
@@ -31,11 +18,7 @@ import java.util.List;
 import java.util.Random;
 import static org.junit.Assert.assertTrue;
 
-/**
- * This test is running as part of release verification simulator test. Hence every change in this class should be
- * discussed with QE team since it can affect release verification tests.
- */
-public class CPMapTest extends HazelcastTest {
+public class CPMapRoutingTest extends HazelcastTest {
     // number of cp groups to host the created maps; if (distinctMaps % maps) == 0 then there's a uniform distribution of maps
     // over cp groups, otherwise maps are allocated per-cp group in a RR-fashion. If cpGroups == 0 then all CPMap instances will
     // be hosted by the default CPGroup. When cpGroups > 0, we create and host CPMaps across non-default CP Groups.
@@ -48,8 +31,9 @@ public class CPMapTest extends HazelcastTest {
     public int valuesCount = 100;
     // size in bytes for each key's associated value
     public int valueSizeBytes = 100;
+    public boolean fillOnPrepare = true;
 
-    protected List<CPMap<Integer, byte[]>> mapReferences;
+    private List<CPMap<Integer, byte[]>> mapReferences;
 
     private byte[][] values;
 
@@ -70,6 +54,21 @@ public class CPMapTest extends HazelcastTest {
         }
 
         operationCounterList = targetInstance.getList(name + "Report");
+    }
+
+    @Prepare(global = true)
+    public void prepare() {
+        if (!fillOnPrepare) {
+            return;
+        }
+
+        byte[] initialValue = GeneratorUtils.generateByteArray(new Random(0), valueSizeBytes);
+        for (CPMap<Integer, byte[]> mapReference : mapReferences) {
+            for (int key = 0; key < keys; key++) {
+                mapReference.set(key, initialValue);
+
+            }
+        }
     }
 
     private byte[][] createValues() {
@@ -93,12 +92,6 @@ public class CPMapTest extends HazelcastTest {
         return cpGroupNames;
     }
 
-    @TimeStep(prob = 1)
-    public void set(ThreadState state) {
-        state.randomMap().set(state.randomKey(), state.randomValue());
-        state.operationCounter.setCount++;
-    }
-
     @TimeStep(prob = 0)
     public void put(ThreadState state) {
         state.randomMap().put(state.randomKey(), state.randomValue());
@@ -106,49 +99,9 @@ public class CPMapTest extends HazelcastTest {
     }
 
     @TimeStep(prob = 0)
-    public void putIfAbsent(ThreadState state) {
-        state.randomMap().putIfAbsent(state.randomKey(), state.randomValue());
-        state.operationCounter.putIfAbsentCount++;
-    }
-
-    @TimeStep(prob = 0)
     public void get(ThreadState state) {
         state.randomMap().get(state.randomKey());
         state.operationCounter.getCount++;
-    }
-
-    // 'remove' and 'delete' other than their first invocation pointless -- we're just timing the logic that underpins the
-    // retrieval of no value.
-
-    @TimeStep(prob = 0)
-    public void remove(ThreadState state) {
-        state.randomMap().remove(state.randomKey());
-        state.operationCounter.removeCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void delete(ThreadState state) {
-        state.randomMap().delete(state.randomKey());
-        state.operationCounter.deleteCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void cas(ThreadState state) {
-        CPMap<Integer, byte[]> randomMap = state.randomMap();
-        Integer key = state.randomKey();
-        byte[] expectedValue = randomMap.get(key);
-        if (expectedValue != null) {
-            randomMap.compareAndSet(key, expectedValue, state.randomValue());
-            state.operationCounter.casCount++;
-        }
-    }
-
-    @TimeStep(prob = 0)
-    public void setThenDelete(ThreadState state) {
-        CPMap<Integer, byte[]> map = state.randomMap();
-        int key = state.randomKey();
-        map.set(key, state.randomValue());
-        map.delete(key);
     }
 
     @AfterRun
@@ -194,7 +147,12 @@ public class CPMapTest extends HazelcastTest {
         }
 
         public CPMap<Integer, byte[]> randomMap() {
-            return mapReferences.get(randomInt(maps));
+            int referenceIndex = 0;
+            int curr = referenceIndex++;
+            if (referenceIndex == maps) {
+                referenceIndex = 0;
+            }
+            return mapReferences.get(curr);
         }
     }
 }

@@ -1,0 +1,55 @@
+- name: iatomicreference-cp-tests-direct-disabled-smart-routing-8ms
+  repetitions: -1
+  def: &defaults
+    duration: 780s
+    repetitions: 1
+    loadgenerator_count: 1
+    node_count: 3
+    driver: hazelcast-enterprise5
+    version: maven=5.5.0-ROUTING
+    client_args: >
+      -Dhazelcast.internal.override.version=5.5
+      -Xms3g
+      -Xmx3g
+      --add-modules java.se 
+      --add-exports java.base/jdk.internal.ref=ALL-UNNAMED 
+      --add-opens java.base/java.lang=ALL-UNNAMED 
+      --add-opens java.base/sun.nio.ch=ALL-UNNAMED 
+      --add-opens java.management/sun.management=ALL-UNNAMED 
+      --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
+    member_args: >
+      -Dhazelcast.internal.override.version=5.5
+      -Xms3g
+      -Xmx3g
+      --add-modules java.se 
+      --add-exports java.base/jdk.internal.ref=ALL-UNNAMED 
+      --add-opens java.base/java.lang=ALL-UNNAMED 
+      --add-opens java.base/sun.nio.ch=ALL-UNNAMED 
+      --add-opens java.management/sun.management=ALL-UNNAMED 
+      --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
+    loadgenerator_hosts: loadgenerators
+    node_hosts: nodes
+    verify_enabled: False
+    performance_monitor_interval_seconds: 1
+    warmup_seconds: 0
+    cooldown_seconds: 0
+
+
+
+######################################### THP testing (3CP GP) ##########################################
+
+
+#  ######################################### GET TESTS ##########################################
+
+# - name: iatomicreference-3cp-groups-get-tests-throughput-64-bytes-direct-disabled-routing
+#  <<: *defaults
+#  cp_leader: 10.0.63.59
+#  cp_leader2: 10.0.63.221
+#  test:
+#    - class: com.hazelcast.simulator.tests.cp.IAtomicReferenceTest
+#      threadCount: 70
+#      referenceCount: 3
+#      cpGroupCount: 3
+#      getProb: 1
+#      setProb: 0
+#      valueSize: 64

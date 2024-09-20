@@ -90,6 +90,20 @@ public class Hazelcast4PlusDriver extends Driver<HazelcastInstance> {
                 // this way of loading is preferred so that env-variables and sys properties are picked up
                 System.setProperty("hazelcast.config", configFile.getAbsolutePath());
                 Config config = Config.load();
+                String privateAddress = get("PRIVATE_ADDRESS");
+                String cpLeader = get("cp_leader");
+                String cpLeader2 = get("cp_leader2");
+                LOGGER.info("### Got cp leader: " + cpLeader);
+                if (cpLeader != null && cpLeader.equals(privateAddress)) {
+                    LOGGER.info("### Setting CP member priority to 1");
+                    config.getCPSubsystemConfig().setCPMemberPriority(1);
+                }
+
+                if (cpLeader2 != null && cpLeader2.equals(privateAddress)) {
+                    LOGGER.info("### Setting CP member priority to 1");
+                    config.getCPSubsystemConfig().setCPMemberPriority(1);
+                }
+
                 hazelcastInstance = Hazelcast.newHazelcastInstance(config);
             } catch (NoSuchMethodError e) {
                 // Fall back in case Config.load doesn't exist (pre 4.2)

@@ -16,6 +16,7 @@
 package com.hazelcast.simulator.worker.loadsupport;
 
 import com.hazelcast.cache.ICache;
+import com.hazelcast.cp.CPMap;
 import com.hazelcast.map.IMap;
 
 import javax.cache.Cache;
@@ -34,6 +35,10 @@ public final class StreamerFactory {
 
     public static <K, V> Streamer<K, V> getInstance(IMap<K, V> map) {
         return getInstance(map, DEFAULT_CONCURRENCY_LEVEL);
+    }
+
+    public static <K, V> Streamer<K, V> getInstance(CPMap<K, V> map) {
+        return new SyncCpMapStreamer<>(map);
     }
 
     public static <K, V> Streamer<K, V> getInstance(IMap<K, V> map, int concurrencyLevel) {
