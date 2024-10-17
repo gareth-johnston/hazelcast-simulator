@@ -21,6 +21,41 @@ while IFS='=' read -r key value; do
     export "$key"="$value"
 done < "parameters"
 
+
+if [ "${WORKER_TYPE}" = "member" ]; then
+  # Check if cp-data is mounted
+  if mount | grep /cp-data > /dev/null; then
+      echo "Clearing contents of /cp-data directory..."
+      sudo rm -rf /cp-data/*
+  else
+      echo "Setting up /cp-data for the first time..."
+
+      # Unmount /dev/nvme1n1 if it's already mounted elsewhere
+      if mount | grep /dev/nvme1n1 > /dev/null; then
+          echo "Unmounting /dev/nvme1n1..."
+          sudo umount /dev/nvme1n1
+      fi
+
+      # Create XFS filesystem on /dev/nvme1n1 if it's not already formatted
+      sudo mkfs.xfs -f /dev/nvme1n1 || { echo "Failed to format /dev/nvme1n1"; exit 1; }
+
+      # Create /cp-data directory if it doesn't exist
+      sudo mkdir -p /cp-data
+
+      # Change the ownership of cp-data to ec2-user
+      sudo chown ec2-user:ec2-user /cp-data
+
+      # Change the permissions of cp-data to allow read/write by ec2-user
+      sudo chmod 755 /cp-data
+
+      # Mount the filesystem
+      sudo mount /dev/nvme1n1 /cp-data
+
+      # Change the ownership of the mounted filesystem to ec2-user
+      sudo chown ec2-user:ec2-user /cp-data
+  fi
+fi
+
 # If you want to be sure that you have the right governor installed; uncomment
 # the following 3 lines. They will force the right governor to be used.
 #old_governor=$(sudo cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)

@@ -3,39 +3,40 @@
 
   vars:
     jdk_url: null
-    tar_gz_filename: "{{ jdk_url | basename }}"
+    download_dir: "~{{ console_user | default(ansible_user) }}"
 
   tasks:
 
-  - name: Downloads the tar.gz
-    get_url:
-      url: "{{ jdk_url }}"
-      dest: ~{{ console_user | default(ansible_user) }}
+    - name: Downloads the tar.gz
+      get_url:
+        url: "{{ jdk_url }}"
+        dest: "{{ download_dir }}/"
+      register: downloaded_file
 
-  - name: Extract the tar.gz
-    unarchive:
-      src: "{{ tar_gz_filename }}"
-      dest: ~{{ console_user | default(ansible_user) }}
-      remote_src: yes
-      list_files: yes
-    register: archive_contents
+    - name: Extract the tar.gz
+      unarchive:
+        src: "{{ downloaded_file.dest }}"
+        dest: "{{ download_dir }}"
+        remote_src: yes
+        list_files: yes
+      register: archive_contents
 
-  - name: Delete tar.gz file
-    file:
-      state: absent
-      path: "{{ tar_gz_filename }}"
+    - name: Delete tar.gz file
+      file:
+        state: absent
+        path: "{{ downloaded_file.dest }}"
 
-  - name: Add JAVA_HOME to PATH
-    lineinfile:
-      dest: ~{{ console_user | default(ansible_user) }}/.bashrc
-      state: present
-      line: "export PATH=$JAVA_HOME/bin:$PATH"
-      insertbefore: BOF
+    - name: Add JAVA_HOME to PATH
+      lineinfile:
+        dest: "{{ download_dir }}/.bashrc"
+        state: present
+        line: "export PATH=$JAVA_HOME/bin:$PATH"
+        insertbefore: BOF
 
-  - name: Update JAVA_HOME
-    lineinfile:
-      dest: ~{{ console_user | default(ansible_user) }}/.bashrc
-      state: present
-      regexp: '^export JAVA_HOME'
-      line: "export JAVA_HOME=~{{ console_user | default(ansible_user) }}/{{ archive_contents.files[0].split('/')[0] }}"
-      insertbefore: BOF
+    - name: Update JAVA_HOME
+      lineinfile:
+        dest: "{{ download_dir }}/.bashrc"
+        state: present
+        regexp: '^export JAVA_HOME'
+        line: "export JAVA_HOME={{ download_dir }}/{{ archive_contents.files[0].split('/')[0] }}"
+        insertbefore: BOF

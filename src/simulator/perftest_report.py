@@ -67,8 +67,8 @@ def analyze_run(config: ReportConfig, run_dir, run_label):
     df_latency_history = analyze_latency_history(config.report_dir, run_dir, attributes)
     result = merge_dataframes(result, df_latency_history)
 
-    df_dstat = analyze_dstat(run_dir, attributes)
-    result = merge_dataframes(result, df_dstat)
+    # df_dstat = analyze_dstat(run_dir, attributes)
+    # result = merge_dataframes(result, df_dstat)
 
     info(f"Analyzing run_path:{run_dir}: Done")
     return result

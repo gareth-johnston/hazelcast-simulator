@@ -70,7 +70,7 @@ public final class TestCaseRunner {
 
     private static final int RUN_PHASE_LOG_INTERVAL_SECONDS = 30;
     private static final int WAIT_FOR_PHASE_COMPLETION_LOG_INTERVAL_SECONDS = 30;
-    private static final int WAIT_FOR_PHASE_COMPLETION_LOG_VERBOSE_DELAY_SECONDS = 300;
+    private static final int WAIT_FOR_PHASE_COMPLETION_LOG_VERBOSE_DELAY_SECONDS = 10000;
     private static final Logger LOGGER = LogManager.getLogger(TestCaseRunner.class);
 
     private final TestData test;

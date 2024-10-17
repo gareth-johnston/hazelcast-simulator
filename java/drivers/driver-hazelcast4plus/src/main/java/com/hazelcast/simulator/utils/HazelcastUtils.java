@@ -81,7 +81,7 @@ public final class HazelcastUtils {
      *
      */
     public static void handlePerAgentConfig(Map<String, String> properties, Config config) {
-        String cpPriorities = properties.get("cp_priority");
+        String cpPriorities = properties.get("cp_priorities");
         if (cpPriorities == null) {
             return;
         }

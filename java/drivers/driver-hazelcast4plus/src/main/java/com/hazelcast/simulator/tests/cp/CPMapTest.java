@@ -20,6 +20,7 @@ import com.hazelcast.cp.CPMap;
 import com.hazelcast.simulator.hz.HazelcastTest;
 import com.hazelcast.simulator.test.BaseThreadState;
 import com.hazelcast.simulator.test.annotations.AfterRun;
+import com.hazelcast.simulator.test.annotations.Prepare;
 import com.hazelcast.simulator.test.annotations.Setup;
 import com.hazelcast.simulator.test.annotations.TimeStep;
 import com.hazelcast.simulator.test.annotations.Verify;
@@ -29,6 +30,11 @@ import com.hazelcast.simulator.utils.GeneratorUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static com.hazelcast.simulator.utils.CommonUtils.sleepSeconds;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -48,16 +54,26 @@ public class CPMapTest extends HazelcastTest {
     public int valuesCount = 100;
     // size in bytes for each key's associated value
     public int valueSizeBytes = 100;
+    public int keySizeBytes = 100;
+    private String val;
 
-    private List<CPMap<Integer, byte[]>> mapReferences;
+    private List<CPMap<String, String>> mapReferences;
 
     private byte[][] values;
+    private List<String> keyPool;
 
     private IList<CpMapOperationCounter> operationCounterList;
 
     @Setup
     public void setup() {
-        values = createValues();
+        val = new String(new byte[32]);
+        keyPool = new ArrayList<>();
+
+        logger.info("Generating " + keys + " keys");
+        for (int i = 0; i < keys; i++) {
+            keyPool.add(generateString(i));
+        }
+        logger.info("Generated " + keys + " keys");
 
         // (1) create the cp group names that will host the maps
         String[] cpGroupNames = createCpGroupNames();
@@ -66,10 +82,61 @@ public class CPMapTest extends HazelcastTest {
         for (int i = 0; i < maps; i++) {
             String cpGroup = cpGroupNames[i % cpGroupNames.length];
             String mapName = "map" + i + "@" + cpGroup;
+            logger.info("Creating CPMap: " + mapName);
             mapReferences.add(targetInstance.getCPSubsystem().getMap(mapName));
         }
 
         operationCounterList = targetInstance.getList(name + "Report");
+        logger.info("Sleeping for 60s to allow CP Subsystem to stabilize");
+        sleepSeconds(60);
+    }
+
+    @Prepare(global = true)
+    public void prepare() {
+        // Determine the number of threads, e.g., based on available processors
+        int threadCount = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        // Calculate batch size
+        int batchSize = (int) Math.ceil((double) keyPool.size() / threadCount);
+
+        // Iterate through mapReferences
+        for (CPMap<String, String> map : mapReferences) {
+            // Split the keyPool into batches
+            for (int t = 0; t < threadCount; t++) {
+                // Define the range of keys for this batch
+                int start = t * batchSize;
+                int end = Math.min(start + batchSize, keyPool.size());
+
+                // Create a sublist for this thread
+                List<String> keyBatch = keyPool.subList(start, end);
+
+                // Submit each batch processing task to the executor
+                executor.submit(() -> {
+                    int i = 0;
+                    for (String key : keyBatch) {
+                        map.set(key, val);
+
+                        // Logging every 10,000 keys
+                        if (i++ % 10000 == 0) {
+                            logger.info("Preloaded " + i + " keys in this batch.");
+                        }
+                    }
+                });
+            }
+        }
+
+        // Shutdown the executor service and wait for all tasks to complete
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                logger.warn("Timeout waiting for tasks to finish.");
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            logger.error("Thread execution interrupted", e);
+            executor.shutdownNow();
+        }
     }
 
     private byte[][] createValues() {
@@ -94,6 +161,7 @@ public class CPMapTest extends HazelcastTest {
     }
 
     @TimeStep(prob = 1)
+<<<<<<< Updated upstream
     public void set(ThreadState state) {
         state.randomMap().set(state.randomKey(), state.randomValue());
         state.operationCounter.setCount++;
@@ -151,6 +219,13 @@ public class CPMapTest extends HazelcastTest {
         map.delete(key);
     }
 
+=======
+    public void putIfAbsent(ThreadState state) {
+        state.getNextMap().putIfAbsent(keyPool.get(state.randomKey()), val);
+        state.operationCounter.putIfAbsentCount++;
+    }
+
+>>>>>>> Stashed changes
     @AfterRun
     public void afterRun(ThreadState state) {
         operationCounterList.add(state.operationCounter);
@@ -166,10 +241,10 @@ public class CPMapTest extends HazelcastTest {
         logger.info(name + ": " + total + " from " + operationCounterList.size() + " worker threads");
 
         // basic verification
-        for (CPMap<Integer, byte[]> mapReference : mapReferences) {
+        for (CPMap<String, String> mapReference : mapReferences) {
             int entriesCount = 0;
             for (int key = 0; key < keys; key++) {
-                byte[] get = mapReference.get(key);
+                String get = mapReference.get(keyPool.get(key));
                 if (get != null) {
                     entriesCount++;
                 }
@@ -193,8 +268,41 @@ public class CPMapTest extends HazelcastTest {
             return values[randomInt(valuesCount)]; // [0, values)
         }
 
+<<<<<<< Updated upstream
         public CPMap<Integer, byte[]> randomMap() {
             return mapReferences.get(randomInt(maps));
+=======
+        public CPMap<String, String> getNextMap() {
+            if (currentMapIndex == maps) {
+                currentMapIndex = 0;
+            }
+            return mapReferences.get(currentMapIndex++);
+>>>>>>> Stashed changes
         }
     }
+
+    private String generateString(int number) {
+        String prefix = "PREFIX_";
+
+        String numberStr = Integer.toString(number);
+
+        int totalCharacters = keySizeBytes / 2;
+        int remainingLength = totalCharacters - (prefix.length() + numberStr.length());
+
+        Random random = new Random();
+        StringBuilder randomDigits = new StringBuilder(remainingLength);
+        for (int i = 0; i < remainingLength; i++) {
+            randomDigits.append(random.nextInt(10));  // Random digit between 0-9
+        }
+
+        String result = prefix + numberStr + randomDigits;
+
+        // Ensure the result is exactly the desired number of characters
+        if (result.length() != totalCharacters) {
+            throw new IllegalStateException("Generated string is not exactly the correct length.");
+        }
+
+        return result;
+    }
+
 }
