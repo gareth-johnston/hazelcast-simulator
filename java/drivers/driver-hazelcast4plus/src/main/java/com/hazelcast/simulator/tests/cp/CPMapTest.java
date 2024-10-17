@@ -161,71 +161,13 @@ public class CPMapTest extends HazelcastTest {
     }
 
     @TimeStep(prob = 1)
-<<<<<<< Updated upstream
-    public void set(ThreadState state) {
-        state.randomMap().set(state.randomKey(), state.randomValue());
-        state.operationCounter.setCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void put(ThreadState state) {
-        state.randomMap().put(state.randomKey(), state.randomValue());
-        state.operationCounter.putCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void putIfAbsent(ThreadState state) {
-        state.randomMap().putIfAbsent(state.randomKey(), state.randomValue());
-        state.operationCounter.putIfAbsentCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void get(ThreadState state) {
-        state.randomMap().get(state.randomKey());
-        state.operationCounter.getCount++;
-    }
-
-    // 'remove' and 'delete' other than their first invocation pointless -- we're just timing the logic that underpins the
-    // retrieval of no value.
-
-    @TimeStep(prob = 0)
-    public void remove(ThreadState state) {
-        state.randomMap().remove(state.randomKey());
-        state.operationCounter.removeCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void delete(ThreadState state) {
-        state.randomMap().delete(state.randomKey());
-        state.operationCounter.deleteCount++;
-    }
-
-    @TimeStep(prob = 0)
-    public void cas(ThreadState state) {
-        CPMap<Integer, byte[]> randomMap = state.randomMap();
-        Integer key = state.randomKey();
-        byte[] expectedValue = randomMap.get(key);
-        if (expectedValue != null) {
-            randomMap.compareAndSet(key, expectedValue, state.randomValue());
-            state.operationCounter.casCount++;
-        }
-    }
-
-    @TimeStep(prob = 0)
-    public void setThenDelete(ThreadState state) {
-        CPMap<Integer, byte[]> map = state.randomMap();
-        int key = state.randomKey();
-        map.set(key, state.randomValue());
-        map.delete(key);
-    }
-
-=======
+        state.getNextMap().delete(state.randomKey());
+        CPMap<Integer, byte[]> randomMap = state.getNextMap();
     public void putIfAbsent(ThreadState state) {
         state.getNextMap().putIfAbsent(keyPool.get(state.randomKey()), val);
         state.operationCounter.putIfAbsentCount++;
     }
 
->>>>>>> Stashed changes
     @AfterRun
     public void afterRun(ThreadState state) {
         operationCounterList.add(state.operationCounter);
@@ -258,6 +200,7 @@ public class CPMapTest extends HazelcastTest {
 
     public class ThreadState extends BaseThreadState {
 
+        private int currentMapIndex = 0;
         final CpMapOperationCounter operationCounter = new CpMapOperationCounter();
 
         public int randomKey() {
@@ -268,16 +211,11 @@ public class CPMapTest extends HazelcastTest {
             return values[randomInt(valuesCount)]; // [0, values)
         }
 
-<<<<<<< Updated upstream
-        public CPMap<Integer, byte[]> randomMap() {
-            return mapReferences.get(randomInt(maps));
-=======
-        public CPMap<String, String> getNextMap() {
+        public CPMap<Integer, byte[]> getNextMap() {
             if (currentMapIndex == maps) {
                 currentMapIndex = 0;
             }
             return mapReferences.get(currentMapIndex++);
->>>>>>> Stashed changes
         }
     }
 
@@ -304,5 +242,4 @@ public class CPMapTest extends HazelcastTest {
 
         return result;
     }
-
 }
