@@ -104,6 +104,20 @@ public class Hazelcast4PlusDriver extends Driver<HazelcastInstance> {
         LOGGER.info(format("%s HazelcastInstance started", workerType));
         warmupPartitions(hazelcastInstance);
         LOGGER.info("Warmed up partitions");
+        if (!"javaclient".equals(workerType)) {
+            if (properties.get("shutdown_member").equals(properties.get("PRIVATE_ADDRESS"))) {
+                LOGGER.info("### This member will be shutdown in 7 minutes ...");
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(420000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    LOGGER.info("### Shutting down member");
+                    hazelcastInstance.getLifecycleService().terminate();
+                }).start();
+            }
+        }
     }
 
     @Override
